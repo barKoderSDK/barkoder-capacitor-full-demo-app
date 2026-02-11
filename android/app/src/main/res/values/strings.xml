@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">barkoder_app_capacitor</string>
+    <string name="title_activity_main">barkoder_app_capacitor</string>
+    <string name="package_name">com.barkoder.appcapacitor</string>
+    <string name="custom_url_scheme">com.barkoder.appcapacitor</string>
+</resources>
