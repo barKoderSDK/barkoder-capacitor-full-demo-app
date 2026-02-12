@@ -150,6 +150,10 @@ export const useScannerLogic = (mode: string) => {
 
     if (mode !== MODES.VIN) {
       await Barkoder.setBarcodeTypeEnabled({ type: BarcodeType.ocrText, enabled: false });
+      await Barkoder.setCustomOption({
+        option: 'enable_ocr_functionality',
+        value: 0,
+      });
     }
     await Barkoder.setBarcodeTypeEnabled({ type: BarcodeType.idDocument, enabled: mode === MODES.MRZ });
 
@@ -303,11 +307,6 @@ export const useScannerLogic = (mode: string) => {
         await toggleBarcodeType(typeId, enabled, enabledTypes),
       );
       setEnabledTypes(nextEnabledTypes);
-
-      if (typeId === 'ocrText' && mode === MODES.VIN) {
-        await Barkoder.setBarcodeTypeEnabled({ type: BarcodeType.ocrText, enabled });
-        await Barkoder.setCustomOption({ option: 'enable_ocr_functionality', value: enabled ? 1 : 0 });
-      }
     },
     [enabledTypes, mode, toggleBarcodeType],
   );
@@ -319,14 +318,6 @@ export const useScannerLogic = (mode: string) => {
         await enableAllBarcodeTypes(enabled, category, enabledTypes),
       );
       setEnabledTypes(nextEnabledTypes);
-
-      if (category === '2D' && mode === MODES.VIN && nextEnabledTypes.ocrText) {
-        await Barkoder.setBarcodeTypeEnabled({
-          type: BarcodeType.ocrText,
-          enabled: Boolean(nextEnabledTypes.ocrText),
-        });
-        await Barkoder.setCustomOption({ option: 'enable_ocr_functionality', value: enabled ? 1 : 0 });
-      }
     },
     [enableAllBarcodeTypes, enabledTypes, mode],
   );

@@ -30,9 +30,12 @@ export const useBarcodeConfig = (mode: string) => {
 
     await Barkoder.setBarcodeTypeEnabled({ type: BarcodeType.idDocument, enabled: mode === MODES.MRZ });
 
-    if (mode !== MODES.VIN) {
-      await Barkoder.setBarcodeTypeEnabled({ type: BarcodeType.ocrText, enabled: false });
-    }
+    const vinOcrEnabled = mode === MODES.VIN && Boolean(enabledTypes.ocrText);
+    await Barkoder.setBarcodeTypeEnabled({ type: BarcodeType.ocrText, enabled: vinOcrEnabled });
+    await Barkoder.setCustomOption({
+      option: 'enable_ocr_functionality',
+      value: vinOcrEnabled ? 1 : 0,
+    });
   }, [mode]);
 
   const toggleBarcodeType = useCallback(
