@@ -109,7 +109,9 @@ export const useScannerLogic = (mode: string) => {
   const applyDecoderConfig = useCallback(async (types: Record<string, boolean>): Promise<void> => {
     const normalizedTypes = normalizeEnabledTypesForMode(mode, types);
     const decoderConfig: Record<string, unknown> = {};
-    const configurableTypes = getConfigurableTypesForMode(mode);
+    const configurableTypes = getConfigurableTypesForMode(mode).filter(
+      (barcodeType) => !(mode === MODES.VIN && barcodeType.id === 'ocrText' && !normalizedTypes.ocrText),
+    );
 
     configurableTypes.forEach((barcodeType) => {
       decoderConfig[barcodeType.id] = createBarcodeConfig(
@@ -150,10 +152,6 @@ export const useScannerLogic = (mode: string) => {
 
     if (mode !== MODES.VIN) {
       await Barkoder.setBarcodeTypeEnabled({ type: BarcodeType.ocrText, enabled: false });
-      await Barkoder.setCustomOption({
-        option: 'enable_ocr_functionality',
-        value: 0,
-      });
     }
     await Barkoder.setBarcodeTypeEnabled({ type: BarcodeType.idDocument, enabled: mode === MODES.MRZ });
 
@@ -163,14 +161,20 @@ export const useScannerLogic = (mode: string) => {
     } else if (mode === MODES.VIN) {
       await Barkoder.setEnableVINRestrictions({ value: true });
       await Barkoder.setRegionOfInterest({ left: 0, top: 35, width: 100, height: 30 });
-      await Barkoder.setBarcodeTypeEnabled({
-        type: BarcodeType.ocrText,
-        enabled: Boolean(enabledTypes.ocrText),
-      });
-      await Barkoder.setCustomOption({
-        option: 'enable_ocr_functionality',
-        value: enabledTypes.ocrText ? 1 : 0,
-      });
+      if (enabledTypes.ocrText) {
+        try {
+          await Barkoder.setBarcodeTypeEnabled({
+            type: BarcodeType.ocrText,
+            enabled: true,
+          });
+          await Barkoder.setCustomOption({
+            option: 'enable_ocr_functionality',
+            value: 1,
+          });
+        } catch (error) {
+          console.warn('VIN OCR could not be enabled. Continuing VIN barcode scan only.', error);
+        }
+      }
     } else if (mode === MODES.DPM) {
       await Barkoder.setBarcodeTypeEnabled({ type: BarcodeType.datamatrix, enabled: true });
       await Barkoder.setDatamatrixDpmModeEnabled({ enabled: true });
@@ -307,6 +311,20 @@ export const useScannerLogic = (mode: string) => {
         await toggleBarcodeType(typeId, enabled, enabledTypes),
       );
       setEnabledTypes(nextEnabledTypes);
+
+      if (typeId === 'ocrText' && mode === MODES.VIN) {
+        if (!enabled) {
+          await Barkoder.setCustomOption({ option: 'enable_ocr_functionality', value: 0 });
+          return;
+        }
+
+        try {
+          await Barkoder.setBarcodeTypeEnabled({ type: BarcodeType.ocrText, enabled: true });
+          await Barkoder.setCustomOption({ option: 'enable_ocr_functionality', value: 1 });
+        } catch (error) {
+          console.warn('VIN OCR could not be enabled from settings.', error);
+        }
+      }
     },
     [enabledTypes, mode, toggleBarcodeType],
   );
@@ -318,6 +336,29 @@ export const useScannerLogic = (mode: string) => {
         await enableAllBarcodeTypes(enabled, category, enabledTypes),
       );
       setEnabledTypes(nextEnabledTypes);
+
+      if (category === '2D' && mode === MODES.VIN) {
+        if (!nextEnabledTypes.ocrText) {
+          await Barkoder.setCustomOption({
+            option: 'enable_ocr_functionality',
+            value: 0,
+          });
+          return;
+        }
+
+        try {
+          await Barkoder.setBarcodeTypeEnabled({
+            type: BarcodeType.ocrText,
+            enabled: true,
+          });
+          await Barkoder.setCustomOption({
+            option: 'enable_ocr_functionality',
+            value: 1,
+          });
+        } catch (error) {
+          console.warn('VIN OCR could not be enabled from Enable All.', error);
+        }
+      }
     },
     [enableAllBarcodeTypes, enabledTypes, mode],
   );
@@ -360,12 +401,17 @@ export const useScannerLogic = (mode: string) => {
       }
 
       if (saved?.enabledTypes) {
-        const nextEnabledTypes = mode === MODES.GALLERY
-          ? normalizeEnabledTypesForMode(mode, getInitialEnabledTypes(mode))
-          : normalizeEnabledTypesForMode(mode, {
+        const mergedEnabledTypes = mode === MODES.GALLERY
+          ? getInitialEnabledTypes(mode)
+          : {
               ...getInitialEnabledTypes(mode),
               ...saved.enabledTypes,
-            });
+            };
+        if (mode === MODES.VIN) {
+          // VIN mode must always start with OCR disabled; users can enable it manually from settings.
+          mergedEnabledTypes.ocrText = false;
+        }
+        const nextEnabledTypes = normalizeEnabledTypesForMode(mode, mergedEnabledTypes);
         setEnabledTypes(nextEnabledTypes);
       } else if (mode === MODES.GALLERY) {
         setEnabledTypes(normalizeEnabledTypesForMode(mode, getInitialEnabledTypes(mode)));

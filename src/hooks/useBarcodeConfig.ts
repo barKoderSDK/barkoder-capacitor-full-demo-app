@@ -18,7 +18,11 @@ const getConfigurableTypes = (mode: string) => {
 export const useBarcodeConfig = (mode: string) => {
   const updateBarkoderConfig = useCallback(async (enabledTypes: Record<string, boolean>): Promise<void> => {
     const decoderConfig: Record<string, unknown> = {};
-    getConfigurableTypes(mode).forEach((barcodeType) => {
+    const configurableTypes = getConfigurableTypes(mode).filter(
+      (barcodeType) => !(mode === MODES.VIN && barcodeType.id === 'ocrText' && !enabledTypes.ocrText),
+    );
+
+    configurableTypes.forEach((barcodeType) => {
       decoderConfig[barcodeType.id] = createBarcodeConfig(barcodeType.id, Boolean(enabledTypes[barcodeType.id]));
     });
 
@@ -30,12 +34,9 @@ export const useBarcodeConfig = (mode: string) => {
 
     await Barkoder.setBarcodeTypeEnabled({ type: BarcodeType.idDocument, enabled: mode === MODES.MRZ });
 
-    const vinOcrEnabled = mode === MODES.VIN && Boolean(enabledTypes.ocrText);
-    await Barkoder.setBarcodeTypeEnabled({ type: BarcodeType.ocrText, enabled: vinOcrEnabled });
-    await Barkoder.setCustomOption({
-      option: 'enable_ocr_functionality',
-      value: vinOcrEnabled ? 1 : 0,
-    });
+    if (mode !== MODES.VIN) {
+      await Barkoder.setBarcodeTypeEnabled({ type: BarcodeType.ocrText, enabled: false });
+    }
   }, [mode]);
 
   const toggleBarcodeType = useCallback(
