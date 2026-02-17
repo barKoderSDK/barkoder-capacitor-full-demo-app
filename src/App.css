@@ -424,6 +424,45 @@
   overflow: hidden;
 }
 
+.scanner-page-gallery {
+  background: #fff;
+}
+
+.scanner-gallery-anchor {
+  position: fixed;
+  left: 200vw;
+  top: 200vh;
+  width: 2px;
+  height: 2px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.gallery-processing-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.85);
+  z-index: 5;
+}
+
+.gallery-processing-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(229, 46, 76, 0.2);
+  border-top-color: #e52e4c;
+  border-radius: 50%;
+  animation: gallery-spinner-rotate 0.8s linear infinite;
+}
+
+@keyframes gallery-spinner-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .scanner-top-wrap {
   position: absolute;
   top: 0;

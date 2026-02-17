@@ -17,6 +17,8 @@ import { BARCODE_TYPES_1D, BARCODE_TYPES_2D, MODES } from '../constants/constant
 
 const ALL_TYPES = [...BARCODE_TYPES_1D, ...BARCODE_TYPES_2D];
 const DEFAULT_ENABLED = ['ean13', 'upcA', 'code128', 'qr', 'datamatrix'];
+export const VIN_ALLOWED_TYPE_IDS = ['code39', 'code128', 'qr', 'datamatrix', 'ocrText'];
+const isVinAllowedType = (typeId: string): boolean => VIN_ALLOWED_TYPE_IDS.includes(typeId);
 
 export const getInitialEnabledTypes = (mode: string): Record<string, boolean> => {
   const enabledTypes: Record<string, boolean> = {};
@@ -36,7 +38,7 @@ export const getInitialEnabledTypes = (mode: string): Record<string, boolean> =>
     } else if (mode === MODES.MRZ) {
       enabledTypes[barcodeType.id] = barcodeType.id === 'idDocument';
     } else if (mode === MODES.VIN) {
-      enabledTypes[barcodeType.id] = ['code39', 'code128', 'qr', 'datamatrix'].includes(barcodeType.id);
+      enabledTypes[barcodeType.id] = isVinAllowedType(barcodeType.id) && barcodeType.id !== 'ocrText';
     } else if (mode === MODES.AR_MODE) {
       enabledTypes[barcodeType.id] = ['qr', 'code128', 'code39', 'upcA', 'upcE', 'ean13', 'ean8'].includes(
         barcodeType.id,
@@ -64,10 +66,16 @@ export const normalizeEnabledTypesForMode = (
   }
 
   nextEnabledTypes.idDocument = false;
-
-  if (mode !== MODES.VIN) {
-    nextEnabledTypes.ocrText = false;
+  if (mode === MODES.VIN) {
+    ALL_TYPES.forEach((barcodeType) => {
+      if (!isVinAllowedType(barcodeType.id)) {
+        nextEnabledTypes[barcodeType.id] = false;
+      }
+    });
+    return nextEnabledTypes;
   }
+
+  nextEnabledTypes.ocrText = false;
 
   return nextEnabledTypes;
 };

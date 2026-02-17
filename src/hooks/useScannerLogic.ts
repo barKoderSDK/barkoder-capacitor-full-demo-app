@@ -18,6 +18,7 @@ import {
   getInitialSettings,
   createBarcodeConfig,
   normalizeEnabledTypesForMode,
+  VIN_ALLOWED_TYPE_IDS,
 } from '../utils/scannerConfig';
 import { useBarcodeConfig } from './useBarcodeConfig';
 import { useBarkoderSettings } from './useBarkoderSettings';
@@ -32,7 +33,7 @@ const getConfigurableTypesForMode = (scannerMode: string) => {
   }
 
   if (scannerMode === MODES.VIN) {
-    return ALL_TYPES.filter((barcodeType) => barcodeType.id !== 'idDocument');
+    return ALL_TYPES.filter((barcodeType) => VIN_ALLOWED_TYPE_IDS.includes(barcodeType.id));
   }
 
   return ALL_TYPES.filter((barcodeType) => barcodeType.id !== 'ocrText' && barcodeType.id !== 'idDocument');
@@ -49,7 +50,7 @@ export const useScannerLogic = (mode: string) => {
   const [frozenImage, setFrozenImage] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [isGalleryProcessing, setIsGalleryProcessing] = useState(false);
-  const [galleryScanOutcome, setGalleryScanOutcome] = useState<'idle' | 'success' | 'empty'>('idle');
+  const [galleryScanOutcome, setGalleryScanOutcome] = useState<'idle' | 'success' | 'empty' | 'cancelled'>('idle');
   const [statusMessage, setStatusMessage] = useState('Preparing scanner...');
   const [isSettingsHydrated, setIsSettingsHydrated] = useState(false);
 
@@ -197,7 +198,6 @@ export const useScannerLogic = (mode: string) => {
 
     try {
       clearGalleryFallbackTimer();
-      setIsGalleryProcessing(true);
       setGalleryScanOutcome('idle');
       const photo = await Camera.getPhoto({
         source: CameraSource.Photos,
@@ -208,9 +208,22 @@ export const useScannerLogic = (mode: string) => {
       if (!photo.base64String) {
         clearGalleryFallbackTimer();
         setIsGalleryProcessing(false);
+        setGalleryScanOutcome('cancelled');
         return;
       }
 
+      setIsGalleryProcessing(true);
+
+      const ready = await barkoderService.ensureImageScanReady();
+      if (!ready) {
+        clearGalleryFallbackTimer();
+        setIsGalleryProcessing(false);
+        setGalleryScanOutcome('cancelled');
+        return;
+      }
+
+      await applyDecoderConfig(enabledTypes);
+      await applyModeConfig();
       await Barkoder.scanImage({ base64: photo.base64String });
 
       galleryFallbackTimerRef.current = window.setTimeout(() => {
@@ -226,16 +239,27 @@ export const useScannerLogic = (mode: string) => {
       console.error('Error scanning image from gallery', error);
       clearGalleryFallbackTimer();
       setIsGalleryProcessing(false);
+      setGalleryScanOutcome('cancelled');
     }
-  }, [clearGalleryFallbackTimer]);
+  }, [applyDecoderConfig, applyModeConfig, clearGalleryFallbackTimer, enabledTypes]);
 
   const initializeScanner = useCallback(
-    async (container: HTMLElement): Promise<void> => {
+    async (container: HTMLElement, options?: { autoStart?: boolean }): Promise<void> => {
       containerRef.current = container;
       setStatusMessage('Preparing scanner...');
 
       if (!barkoderService.isNativePlatform) {
         setIsReady(true);
+        return;
+      }
+
+      if (mode === MODES.GALLERY) {
+        setStatusMessage('');
+        setIsReady(true);
+        const autoStart = options?.autoStart ?? true;
+        if (autoStart) {
+          await scanImagePressed();
+        }
         return;
       }
 
@@ -253,9 +277,9 @@ export const useScannerLogic = (mode: string) => {
       console.log('[ScannerFlow] initialize -> applyModeConfig');
       await applyModeConfig();
 
-      if (mode === MODES.GALLERY) {
-        await scanImagePressed();
-      } else {
+      const autoStart = options?.autoStart ?? true;
+
+      if (autoStart) {
         console.log('[ScannerFlow] initialize -> startScanning');
         await startScanning();
       }
@@ -268,17 +292,24 @@ export const useScannerLogic = (mode: string) => {
       setIsReady(false);
       }
     },
-    [applyDecoderConfig, applyModeConfig, enabledTypes, mode, scanImagePressed, startScanning],
+    [
+      applyDecoderConfig,
+      applyModeConfig,
+      enabledTypes,
+      mode,
+      scanImagePressed,
+      startScanning,
+    ],
   );
 
   const initializeScannerSafely = useCallback(
-    async (container: HTMLElement): Promise<void> => {
+    async (container: HTMLElement, options?: { autoStart?: boolean }): Promise<void> => {
       if (isInitializingRef.current) {
         return;
       }
       isInitializingRef.current = true;
       try {
-        await initializeScanner(container);
+        await initializeScanner(container, options);
       } finally {
         isInitializingRef.current = false;
       }
@@ -531,6 +562,7 @@ export const useScannerLogic = (mode: string) => {
     setScannedItems,
     enabledTypes,
     lastScanCount,
+    setLastScanCount,
     settings,
     isFlashOn,
     zoomLevel,

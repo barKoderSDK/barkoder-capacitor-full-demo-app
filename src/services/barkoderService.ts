@@ -6,6 +6,7 @@ const isNativePlatform = Capacitor.getPlatform() !== 'web';
 
 let registered = false;
 let resultListener: PluginListenerHandle | null = null;
+let hiddenInitializationElement: HTMLElement | null = null;
 
 const resultSubscribers = new Set<(result: BarkoderResult) => void>();
 const closeSubscribers = new Set<() => void>();
@@ -36,6 +37,25 @@ const ensureListeners = async (): Promise<void> => {
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => window.setTimeout(resolve, ms));
 
 const getElementBounds = (element: HTMLElement): DOMRect => element.getBoundingClientRect();
+
+const getHiddenInitializationElement = (): HTMLElement => {
+  if (!hiddenInitializationElement) {
+    hiddenInitializationElement = document.createElement('div');
+    hiddenInitializationElement.style.position = 'fixed';
+    hiddenInitializationElement.style.left = '200vw';
+    hiddenInitializationElement.style.top = '200vh';
+    hiddenInitializationElement.style.width = '2px';
+    hiddenInitializationElement.style.height = '2px';
+    hiddenInitializationElement.style.opacity = '0';
+    hiddenInitializationElement.style.pointerEvents = 'none';
+  }
+
+  if (document.body && !hiddenInitializationElement.isConnected) {
+    document.body.appendChild(hiddenInitializationElement);
+  }
+
+  return hiddenInitializationElement;
+};
 
 const getValidBounds = async (element: HTMLElement): Promise<DOMRect> => {
   let rect = getElementBounds(element);
@@ -100,6 +120,16 @@ const ensureCameraPermission = async (): Promise<boolean> => {
   }
 };
 
+const ensureRegistered = async (): Promise<void> => {
+  if (registered) {
+    return;
+  }
+
+  const licenseKey = getLicenseKey();
+  await Barkoder.registerWithLicenseKey({ licenseKey });
+  registered = true;
+};
+
 export const barkoderService = {
   isNativePlatform,
 
@@ -121,16 +151,23 @@ export const barkoderService = {
       }
     }
 
-    if (!registered) {
-      const licenseKey = getLicenseKey();
-      await Barkoder.registerWithLicenseKey({ licenseKey });
-      registered = true;
-    }
+    await ensureRegistered();
 
     // Reinitialize when entering scanner to keep native preview layout in sync
     // with the current web view and avoid stale view artifacts.
     await initializeWithBounds(element, { fullscreen: options?.fullscreen ?? true });
 
+    await ensureListeners();
+    return true;
+  },
+
+  async ensureImageScanReady(): Promise<boolean> {
+    if (!isNativePlatform) {
+      return false;
+    }
+
+    await ensureRegistered();
+    await initializeWithBounds(getHiddenInitializationElement(), { fullscreen: false });
     await ensureListeners();
     return true;
   },

@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { Barkoder, BarkoderConfig, BarcodeType, DekoderConfig } from 'barkoder-capacitor';
 import { BARCODE_TYPES_1D, BARCODE_TYPES_2D, MODES } from '../constants/constants';
-import { createBarcodeConfig } from '../utils/scannerConfig';
+import { createBarcodeConfig, VIN_ALLOWED_TYPE_IDS } from '../utils/scannerConfig';
 
 const ALL_TYPES = [...BARCODE_TYPES_1D, ...BARCODE_TYPES_2D];
 
@@ -10,7 +10,7 @@ const getConfigurableTypes = (mode: string) => {
     return ALL_TYPES.filter((barcodeType) => barcodeType.id === 'idDocument');
   }
   if (mode === MODES.VIN) {
-    return ALL_TYPES.filter((barcodeType) => barcodeType.id !== 'idDocument');
+    return ALL_TYPES.filter((barcodeType) => VIN_ALLOWED_TYPE_IDS.includes(barcodeType.id));
   }
   return ALL_TYPES.filter((barcodeType) => barcodeType.id !== 'ocrText' && barcodeType.id !== 'idDocument');
 };
