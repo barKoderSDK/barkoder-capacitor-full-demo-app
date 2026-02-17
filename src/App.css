@@ -478,9 +478,30 @@
   overflow: hidden;
 }
 
+.scanner-content-loading {
+  background: #000;
+}
+
 .scanner-native-surface {
   width: 100%;
   height: 100%;
+}
+
+.scanner-loading-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: #000;
+  z-index: 12;
+}
+
+.scanner-loading-text {
+  color: #fff;
+  font-size: 13px;
 }
 
 .scanner-fallback,

@@ -190,6 +190,7 @@ export default function ScannerScreen() {
     return ALL_TYPES.filter((item) => enabledTypes[item.id]);
   }, [enabledTypes]);
 
+  const showScannerUi = !isGalleryMode && isReady;
   const activeBarcodeText = activeTypes.map((item) => item.label).join(', ');
   const isResultSheetOpen =
     settings.showResultSheet !== false &&
@@ -283,7 +284,7 @@ export default function ScannerScreen() {
 
   return (
     <div className="scanner-page">
-      {!isGalleryMode && (
+      {showScannerUi && (
         <div className="scanner-top-wrap">
           {activeButton !== 'settings' && (
             <TopBar
@@ -300,18 +301,23 @@ export default function ScannerScreen() {
         </div>
       )}
 
-      <div className="scanner-content-wrap">
+      <div className={`scanner-content-wrap${!isReady ? ' scanner-content-loading' : ''}`}>
         <div ref={scannerRef} className="scanner-native-surface" />
 
         {!isGalleryMode && !isNativePlatform && (
           <div className="scanner-fallback">Native scanner preview is available in iOS/Android builds.</div>
         )}
 
-        {!isGalleryMode && !isReady && <div className="scanner-status">{statusMessage}</div>}
+        {!isGalleryMode && !isReady && (
+          <div className="scanner-loading-overlay" aria-live="polite" aria-label="Preparing scanner">
+            <div className="gallery-processing-spinner" />
+            <div className="scanner-loading-text">{statusMessage || 'Preparing scanner...'}</div>
+          </div>
+        )}
 
         {!isGalleryMode && isGalleryProcessing && <div className="scanner-status">Processing image...</div>}
 
-        {!isGalleryMode && isScanningPaused && (
+        {showScannerUi && isScanningPaused && (
           <PauseOverlay
             isSheetExpanded={isResultSheetExpanded}
             frozenImage={frozenImage}
@@ -320,7 +326,7 @@ export default function ScannerScreen() {
         )}
       </div>
 
-      {!isGalleryMode && (
+      {showScannerUi && (
         <BottomControls
           activeBarcodeText={activeBarcodeText}
           zoomLevel={zoomLevel}
@@ -332,7 +338,7 @@ export default function ScannerScreen() {
         />
       )}
 
-      {!isGalleryMode && (
+      {showScannerUi && (
         <div className="scanner-bottom-wrap">
           <ScannedResultSheet
             scannedItems={scannedItems}
@@ -347,7 +353,7 @@ export default function ScannerScreen() {
         </div>
       )}
 
-      {!isGalleryMode && (
+      {showScannerUi && (
         <UnifiedSettings
           visible={activeButton === 'settings'}
           settings={settings}
