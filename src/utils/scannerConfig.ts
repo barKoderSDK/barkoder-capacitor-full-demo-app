@@ -38,7 +38,7 @@ export const getInitialEnabledTypes = (mode: string): Record<string, boolean> =>
     } else if (mode === MODES.MRZ) {
       enabledTypes[barcodeType.id] = barcodeType.id === 'idDocument';
     } else if (mode === MODES.VIN) {
-      enabledTypes[barcodeType.id] = isVinAllowedType(barcodeType.id) && barcodeType.id !== 'ocrText';
+      enabledTypes[barcodeType.id] = isVinAllowedType(barcodeType.id);
     } else if (mode === MODES.AR_MODE) {
       enabledTypes[barcodeType.id] = ['qr', 'code128', 'code39', 'upcA', 'upcE', 'ean13', 'ean8'].includes(
         barcodeType.id,

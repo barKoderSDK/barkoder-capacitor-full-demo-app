@@ -16,6 +16,7 @@ Capacitor + React implementation of the existing `BarkoderApp` React Native demo
 - Gallery scan (`scanImage`)
 - Barcode type enable/disable + mode-specific presets
 - VIN / DPM / DotCode / AR / Deblur mode presets
+- OCR VIN demo screen with one-tap start button (enables OCR + VIN restrictions)
 - Runtime scanner settings (ROI, speed, resolution, continuous scanning, etc.)
 - Result events via `barkoderResultEvent`
 - History persistence + per-mode settings persistence

@@ -39,6 +39,20 @@
   font-size: 12px;
 }
 
+.demo-launch-wrap {
+  padding: 0 20px 8px;
+}
+
+.demo-launch-button {
+  width: 100%;
+  min-height: 44px;
+  border-radius: 12px;
+  background: #e52e4c;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+
 .topbar {
   display: flex;
   align-items: center;

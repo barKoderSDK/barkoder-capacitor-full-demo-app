@@ -27,7 +27,6 @@ export default function HomeScreen() {
         {!barkoderService.isNativePlatform && (
           <div className="native-banner">Scanner and gallery scanning work on iOS/Android Capacitor builds.</div>
         )}
-
         <HomeGrid sections={SECTIONS} onItemPress={handlePress} />
 
         <BottomBar />

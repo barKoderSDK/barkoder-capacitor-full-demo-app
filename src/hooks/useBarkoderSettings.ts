@@ -58,6 +58,12 @@ export const useBarkoderSettings = (mode: string, startScanning: () => Promise<v
       clearPauseState: () => void,
     ): Promise<ScannerSettings> => {
       const nextSettings = { ...currentSettings, [key]: value } as ScannerSettings;
+      const refreshScanner = async (): Promise<void> => {
+        const stopOp = Barkoder.stopScanning();
+        await stopOp;
+        const startOp = startScanning();
+        await startOp;
+      };
 
       switch (key) {
         case 'compositeMode': {
@@ -92,8 +98,7 @@ export const useBarkoderSettings = (mode: string, startScanning: () => Promise<v
         case 'continuousScanning':
           await Barkoder.setCloseSessionOnResultEnabled({ enabled: !(value as boolean) });
           clearPauseState();
-          await Barkoder.stopScanning();
-          await startScanning();
+          await refreshScanner();
           break;
         case 'decodingSpeed':
           await Barkoder.setDecodingSpeed({ value: value as ScannerSettings['decodingSpeed'] });
@@ -125,8 +130,7 @@ export const useBarkoderSettings = (mode: string, startScanning: () => Promise<v
         case 'continuousThreshold':
           await Barkoder.setThresholdBetweenDuplicatesScans({ value: value as number });
           if (nextSettings.continuousScanning) {
-            await Barkoder.stopScanning();
-            await startScanning();
+            await refreshScanner();
           }
           break;
         default:
